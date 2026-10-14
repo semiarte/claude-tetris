@@ -50,8 +50,11 @@ jobs:
                Elige solo las que realmente correspondan al contenido del issue.
 
             4. Publica un comentario de diagnóstico en **español** en el issue con
-               `gh issue comment ${{ github.event.issue.number }} --body "..."`, usando
-               este formato:
+               `gh issue comment ${{ github.event.issue.number }} --body "..."`. El
+               cuerpo del comentario debe estar escrito en formato Markdown válido
+               que GitHub pueda renderizar correctamente (encabezados con `##`,
+               negritas con `**texto**`, listas con `-`, bloques de código con
+               comillas invertidas simples o triples, etc.), usando esta estructura:
 
                ## Diagnóstico automático
 
