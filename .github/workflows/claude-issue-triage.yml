@@ -1,0 +1,79 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  triage:
+    if: github.event.sender.type != 'Bot'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Issue Triage
+        id: claude-triage
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          claude_args: >-
+            --allowed-tools
+            "Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*),Bash(gh label create:*)"
+
+          prompt: |
+            Eres un asistente de triage de issues para el repositorio ${{ github.repository }}.
+            Analiza el issue número ${{ github.event.issue.number }} y haz lo siguiente:
+
+            1. Lee el issue completo con `gh issue view ${{ github.event.issue.number }} --json title,body,labels`.
+
+            2. Lista las labels existentes con `gh label list`. Si falta alguna de las
+               siguientes etiquetas típicas (y aplica al issue), créala con
+               `gh label create` usando un color y descripción razonables:
+               - `bug` (color d73a4a): algo no funciona como se espera.
+               - `enhancement` (color a2eeef): nueva funcionalidad o mejora.
+               - `question` (color d876e3): pregunta o duda de uso.
+               - `documentation` (color 0075ca): relacionado con README/CLAUDE.md.
+               - `good first issue` (color 7057ff): tarea pequeña y acotada.
+               No crees labels que no apliquen al issue actual.
+
+            3. Aplica las labels apropiadas al issue con
+               `gh issue edit ${{ github.event.issue.number }} --add-label "<label1>,<label2>"`.
+               Elige solo las que realmente correspondan al contenido del issue.
+
+            4. Publica un comentario de diagnóstico en **español** en el issue con
+               `gh issue comment ${{ github.event.issue.number }} --body "..."`, usando
+               este formato:
+
+               ## Diagnóstico automático
+
+               **Resumen**
+               (1-2 frases resumiendo el problema o solicitud)
+
+               **Causa probable / análisis**
+               (explica la causa más probable o el contexto técnico, basándote en el
+               código del repositorio: este es un Tetris en JavaScript vanilla con
+               `game.js` (lógica del juego), `index.html` (estructura y DOM) y
+               `style.css` (estilos). Consulta CLAUDE.md para la arquitectura del
+               proyecto si es necesario.)
+
+               **Archivos probablemente afectados**
+               (lista de archivos/funciones relevantes, ej. `game.js: clearLines()`)
+
+               **Enfoque de solución propuesto**
+               (pasos concretos de alto nivel para resolverlo)
+
+               ---
+               _Este es un diagnóstico preliminar generado automáticamente y puede
+               requerir validación humana._
+
+            No hagas cambios de código ni abras pull requests; solo etiqueta y
+            comenta el issue.
