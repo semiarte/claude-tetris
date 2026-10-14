@@ -39,6 +39,12 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const themeToggle = document.getElementById('theme-toggle');
+const themeLabel = document.getElementById('theme-label');
+
+const GHOST_ALPHA = { dark: 0.2, light: 0.35 };
+let theme = 'dark';
+let gridColor = '#22222e';
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 
@@ -169,7 +175,7 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = gridColor;
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -199,7 +205,7 @@ function draw() {
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
       if (current.shape[r][c])
-        drawBlock(ctx, current.x + c, gy + r, current.shape[r][c], BLOCK, 0.2);
+        drawBlock(ctx, current.x + c, gy + r, current.shape[r][c], BLOCK, GHOST_ALPHA[theme]);
 
   // current piece
   for (let r = 0; r < current.shape.length; r++)
@@ -300,5 +306,25 @@ document.addEventListener('keydown', e => {
 });
 
 restartBtn.addEventListener('click', init);
+
+function applyTheme(t) {
+  theme = t;
+  document.documentElement.dataset.theme = t;
+  gridColor = getComputedStyle(document.documentElement).getPropertyValue('--grid').trim();
+  themeToggle.setAttribute('aria-checked', String(t === 'light'));
+  themeLabel.textContent = t === 'light' ? 'Claro' : 'Oscuro';
+  try { localStorage.setItem('theme', t); } catch (e) {}
+  // the loop is stopped while paused / game over, so redraw manually
+  if (board && current && (paused || gameOver)) draw();
+}
+
+themeToggle.addEventListener('click', () => {
+  applyTheme(theme === 'light' ? 'dark' : 'light');
+  themeToggle.blur(); // keep Space free for hard drop
+});
+
+let savedTheme = 'dark';
+try { savedTheme = localStorage.getItem('theme') === 'light' ? 'light' : 'dark'; } catch (e) {}
+applyTheme(savedTheme);
 
 init();
