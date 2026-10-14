@@ -37,6 +37,8 @@ Rendering (`draw`, `drawNext`, `drawBlock`, `drawGrid`) is plain Canvas 2D — n
 
 Input is a single `keydown` listener dispatching on `e.code` (arrows, `KeyX` for rotate, `Space` for hard drop, `KeyP` for pause); pause/game-over short-circuit all input except unpause/restart.
 
+Theming: colors are CSS variables in `style.css` (`:root` = dark default, `[data-theme="light"]` override). `applyTheme()` in `game.js` sets `data-theme` on `<html>`, reads `--grid` for the canvas grid (canvas can't use CSS vars), persists to `localStorage`, and redraws if the loop is stopped. Ghost alpha is per theme (`GHOST_ALPHA`).
+
 ### Tunable constants (top of `game.js`)
 
 `COLS`, `ROWS`, `BLOCK` (cell size px), `COLORS`, `LINE_SCORES`, initial `dropInterval`. If `COLS`/`ROWS`/`BLOCK` change, update the `<canvas id="board">` `width`/`height` in `index.html` to match (`COLS×BLOCK` by `ROWS×BLOCK`).
@@ -44,4 +46,4 @@ Input is a single `keydown` listener dispatching on `e.code` (arrows, `KeyX` for
 ## Notes
 
 - README.md is written in Spanish and is the authoritative player-facing doc (controls, mechanics, customization table) — keep it in sync with any gameplay-affecting change.
-- `index.html` and `game.js` are tightly coupled via DOM element IDs (`board`, `next-canvas`, `score`, `lines`, `level`, `overlay`, `overlay-title`, `overlay-score`, `restart-btn`); renaming one requires updating the other.
+- `index.html` and `game.js` are tightly coupled via DOM element IDs (`board`, `next-canvas`, `score`, `lines`, `level`, `overlay`, `overlay-title`, `overlay-score`, `restart-btn`, `theme-toggle`, `theme-label`); renaming one requires updating the other.
