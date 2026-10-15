@@ -13,6 +13,8 @@ const COLORS = [
   '#e57373', // Z - red
   '#90caf9', // J - pale blue
   '#ffb74d', // L - orange
+  '#ff7043', // bomba
+  '#7e57c2', // gravedad
 ];
 
 const PIECES = [
@@ -27,6 +29,15 @@ const PIECES = [
 ];
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
+
+// Power-ups: a single-block special piece offered every POWERUP_EVERY lines.
+const POWERUP_EVERY = 5;
+const POWERUPS = {
+  bomb:    { color: 8, icon: '💣' },
+  gravity: { color: 9, icon: '⬇' },
+};
+const BOMB_POINTS_PER_BLOCK = 10;
+const GRAVITY_POINTS_PER_ROW = 5;
 
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
@@ -46,7 +57,7 @@ const GHOST_ALPHA = { dark: 0.2, light: 0.35 };
 let theme = 'dark';
 let gridColor = '#22222e';
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, powerupsGiven, pendingPowerup;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -56,6 +67,11 @@ function randomPiece() {
   const type = Math.floor(Math.random() * 7) + 1;
   const shape = PIECES[type].map(row => [...row]);
   return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
+}
+
+function powerupPiece(kind) {
+  const shape = [[POWERUPS[kind].color]];
+  return { type: 0, power: kind, shape, x: Math.floor(COLS / 2), y: 0 };
 }
 
 function collide(shape, ox, oy) {
@@ -92,7 +108,37 @@ function tryRotate() {
   }
 }
 
+function explodeBomb() {
+  let destroyed = 0;
+  for (let r = current.y - 1; r <= current.y + 1; r++)
+    for (let c = current.x - 1; c <= current.x + 1; c++)
+      if (r >= 0 && r < ROWS && c >= 0 && c < COLS && board[r][c]) {
+        board[r][c] = 0;
+        destroyed++;
+      }
+  score += destroyed * BOMB_POINTS_PER_BLOCK;
+}
+
+function applyGravity() {
+  let moved = 0;
+  for (let c = 0; c < COLS; c++) {
+    let write = ROWS - 1;
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (!board[r][c]) continue;
+      if (r !== write) {
+        board[write][c] = board[r][c];
+        board[r][c] = 0;
+        moved += write - r;
+      }
+      write--;
+    }
+  }
+  score += moved * GRAVITY_POINTS_PER_ROW;
+}
+
 function merge() {
+  if (current.power === 'bomb') { explodeBomb(); return; }
+  if (current.power === 'gravity') { applyGravity(); return; }
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
       if (current.shape[r][c])
@@ -113,6 +159,12 @@ function clearLines() {
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
     level = Math.floor(lines / 10) + 1;
+    const due = Math.floor(lines / POWERUP_EVERY);
+    if (due > powerupsGiven) {
+      powerupsGiven = due;
+      const kinds = Object.keys(POWERUPS);
+      pendingPowerup = kinds[Math.floor(Math.random() * kinds.length)];
+    }
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
     updateHUD();
   }
@@ -149,7 +201,8 @@ function lockPiece() {
 
 function spawn() {
   current = next;
-  next = randomPiece();
+  next = pendingPowerup ? powerupPiece(pendingPowerup) : randomPiece();
+  pendingPowerup = null;
   if (collide(current.shape, current.x, current.y)) {
     endGame();
   }
@@ -171,6 +224,14 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
   // highlight
   context.fillStyle = 'rgba(255,255,255,0.12)';
   context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+  if (colorIndex >= 8) {
+    const icon = Object.values(POWERUPS).find(p => p.color === colorIndex).icon;
+    context.font = `${Math.floor(size * 0.6)}px sans-serif`;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillStyle = '#fff';
+    context.fillText(icon, x * size + size / 2, y * size + size / 2 + 1);
+  }
   context.globalAlpha = 1;
 }
 
@@ -271,6 +332,8 @@ function init() {
   paused = false;
   gameOver = false;
   dropInterval = 1000;
+  powerupsGiven = 0;
+  pendingPowerup = null;
   dropAccum = 0;
   lastTime = performance.now();
   next = randomPiece();
