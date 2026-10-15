@@ -43,7 +43,9 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Power-ups**: cada 5 líneas la siguiente pieza es un bloque especial (se ve en "Siguiente"):
   - 💣 **Bomba**: al aterrizar destruye el área 3×3 a su alrededor (+10 puntos por bloque destruido).
   - ⬇ **Gravedad**: al aterrizar compacta todos los huecos del tablero (+5 puntos por fila que cae cada bloque).
-  - Las constantes `POWERUP_EVERY`, `BOMB_POINTS_PER_BLOCK` y `GRAVITY_POINTS_PER_ROW` están al inicio de `game.js`.
+  - ↔ **Rayo**: al aterrizar vacía la fila donde cae (↔) o la columna completa (↕). Se alterna con rotar (`↑`/`X`) mientras cae (+10 puntos por bloque destruido).
+  - ❄ **Congelar**: al aterrizar detiene la caída automática durante 5 s (+50 puntos). Puedes seguir moviendo la pieza y soltarla con las flechas o el hard drop. El tiempo restante se muestra en el tablero y respeta la pausa.
+  - Las constantes `POWERUP_EVERY`, `BOMB_POINTS_PER_BLOCK`, `GRAVITY_POINTS_PER_ROW`, `LIGHTNING_POINTS_PER_BLOCK`, `FREEZE_MS` y `FREEZE_POINTS` están al inicio de `game.js`.
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
 - **Pausa** y **Game Over** con opción de reinicio.
 

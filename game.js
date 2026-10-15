@@ -15,6 +15,9 @@ const COLORS = [
   '#ffb74d', // L - orange
   '#ff7043', // bomba
   '#7e57c2', // gravedad
+  '#fdd835', // rayo horizontal
+  '#fdd835', // rayo vertical
+  '#4fc3f7', // congelar
 ];
 
 const PIECES = [
@@ -35,9 +38,16 @@ const POWERUP_EVERY = 5;
 const POWERUPS = {
   bomb:    { color: 8, icon: '💣' },
   gravity: { color: 9, icon: '⬇' },
+  lightning: { color: 10, icon: '↔' },
+  freeze:  { color: 12, icon: '❄' },
 };
+const LIGHTNING_VERTICAL = 11; // color del rayo en vertical (se alterna al rotar)
+const ICONS = { 8: '💣', 9: '⬇', 10: '↔', 11: '↕', 12: '❄' };
 const BOMB_POINTS_PER_BLOCK = 10;
 const GRAVITY_POINTS_PER_ROW = 5;
+const LIGHTNING_POINTS_PER_BLOCK = 10;
+const FREEZE_MS = 5000;
+const FREEZE_POINTS = 50;
 
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
@@ -57,7 +67,7 @@ const GHOST_ALPHA = { dark: 0.2, light: 0.35 };
 let theme = 'dark';
 let gridColor = '#22222e';
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, powerupsGiven, pendingPowerup;
+let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, powerupsGiven, pendingPowerup, frozenLeft;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -97,6 +107,10 @@ function rotateCW(shape) {
 }
 
 function tryRotate() {
+  if (current.power === 'lightning') {
+    current.shape = [[current.shape[0][0] === 10 ? LIGHTNING_VERTICAL : 10]];
+    return;
+  }
   const rotated = rotateCW(current.shape);
   const kicks = [0, -1, 1, -2, 2];
   for (const kick of kicks) {
@@ -119,6 +133,19 @@ function explodeBomb() {
   score += destroyed * BOMB_POINTS_PER_BLOCK;
 }
 
+function strikeLightning() {
+  const vertical = current.shape[0][0] === LIGHTNING_VERTICAL;
+  let destroyed = 0;
+  if (vertical) {
+    for (let r = 0; r < ROWS; r++)
+      if (board[r][current.x]) { board[r][current.x] = 0; destroyed++; }
+  } else {
+    for (let c = 0; c < COLS; c++)
+      if (board[current.y][c]) { board[current.y][c] = 0; destroyed++; }
+  }
+  score += destroyed * LIGHTNING_POINTS_PER_BLOCK;
+}
+
 function applyGravity() {
   let moved = 0;
   for (let c = 0; c < COLS; c++) {
@@ -139,6 +166,8 @@ function applyGravity() {
 function merge() {
   if (current.power === 'bomb') { explodeBomb(); return; }
   if (current.power === 'gravity') { applyGravity(); return; }
+  if (current.power === 'lightning') { strikeLightning(); return; }
+  if (current.power === 'freeze') { frozenLeft = FREEZE_MS; score += FREEZE_POINTS; return; }
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
       if (current.shape[r][c])
@@ -225,7 +254,7 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
   context.fillStyle = 'rgba(255,255,255,0.12)';
   context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
   if (colorIndex >= 8) {
-    const icon = Object.values(POWERUPS).find(p => p.color === colorIndex).icon;
+    const icon = ICONS[colorIndex];
     context.font = `${Math.floor(size * 0.6)}px sans-serif`;
     context.textAlign = 'center';
     context.textBaseline = 'middle';
@@ -272,6 +301,17 @@ function draw() {
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
       drawBlock(ctx, current.x + c, current.y + r, current.shape[r][c], BLOCK);
+
+  // freeze indicator
+  if (frozenLeft > 0) {
+    ctx.fillStyle = 'rgba(79,195,247,0.15)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#4fc3f7';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(`❄ ${(frozenLeft / 1000).toFixed(1)}s`, 8, 8);
+  }
 }
 
 function drawNext() {
@@ -310,7 +350,12 @@ function togglePause() {
 function loop(ts) {
   const dt = ts - lastTime;
   lastTime = ts;
-  dropAccum += dt;
+  if (frozenLeft > 0) {
+    frozenLeft = Math.max(0, frozenLeft - dt);
+    dropAccum = 0;
+  } else {
+    dropAccum += dt;
+  }
   if (dropAccum >= dropInterval) {
     dropAccum = 0;
     if (!collide(current.shape, current.x, current.y + 1)) {
@@ -334,6 +379,7 @@ function init() {
   dropInterval = 1000;
   powerupsGiven = 0;
   pendingPowerup = null;
+  frozenLeft = 0;
   dropAccum = 0;
   lastTime = performance.now();
   next = randomPiece();
