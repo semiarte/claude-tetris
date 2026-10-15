@@ -40,6 +40,10 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Pieza fantasma** (_ghost piece_): muestra dónde aterrizará la pieza actual.
 - **Vista previa** de la siguiente pieza.
 - **Sistema de puntuación** clásico de Tetris (100 / 300 / 500 / 800 multiplicado por nivel).
+- **Power-ups**: cada 5 líneas la siguiente pieza es un bloque especial (se ve en "Siguiente"):
+  - 💣 **Bomba**: al aterrizar destruye el área 3×3 a su alrededor (+10 puntos por bloque destruido).
+  - ⬇ **Gravedad**: al aterrizar compacta todos los huecos del tablero (+5 puntos por fila que cae cada bloque).
+  - Las constantes `POWERUP_EVERY`, `BOMB_POINTS_PER_BLOCK` y `GRAVITY_POINTS_PER_ROW` están al inicio de `game.js`.
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
 - **Pausa** y **Game Over** con opción de reinicio.
 
